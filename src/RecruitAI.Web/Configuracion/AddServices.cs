@@ -80,12 +80,10 @@ public static class AddServices
         {
             opciones.UseSqlServer(cadenaCompleta);
         });
-        var opcionesLectura = new DbContextOptionsBuilder<CherokeeDbContext>()
-            .UseSqlServer(cadenaLectura)
-            .Options;
-
-        builder.Services.AddSingleton<IDbContextFactory<CherokeeDbContext>>(
-            _ => new CherokeeDbContextLecturaFactory(opcionesLectura));
+        builder.Services.AddDbContextFactory<CherokeeDbContext>(opciones =>
+        {
+            opciones.UseSqlServer(cadenaLectura);
+        });
 
         var jwtSection = builder.Configuration.GetSection("Jwt");
         var jwtOptions = jwtSection.Get<JwtOptions>()
