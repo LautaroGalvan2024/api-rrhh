@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RecruitAI.Contratos.Dtos.Coincidencias;
@@ -11,6 +12,7 @@ namespace RecruitAI.Web.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class CoincidenciasController : ControllerBase
 {
     private readonly CherokeeDbContext _contexto;
@@ -27,6 +29,7 @@ public class CoincidenciasController : ControllerBase
         _coincidenciasServicio = coincidenciasServicio;
     }
 
+    [Authorize(Policy = "administracion")]
     [HttpPost("puestos/{puestoId:guid}/embedding")]
     public async Task<IActionResult> GenerarEmbeddingPuestoAsync(Guid puestoId, CancellationToken cancellationToken)
     {
@@ -75,6 +78,7 @@ public class CoincidenciasController : ControllerBase
         return Ok(new { puestoId, longitud = vector.Length });
     }
 
+    [Authorize(Policy = "administracion")]
     [HttpPost("candidatos/{candidatoId:guid}/embedding")]
     public async Task<IActionResult> GenerarEmbeddingCandidatoAsync(Guid candidatoId, CancellationToken cancellationToken)
     {
@@ -110,6 +114,7 @@ public class CoincidenciasController : ControllerBase
         return Ok(new { candidatoId, longitud = vector.Length });
     }
 
+    [Authorize(Policy = "lectura")]
     [HttpGet("puestos/{puestoId:guid}/top")]
     public async Task<ActionResult<IEnumerable<CoincidenciaDto>>> ObtenerTopAsync(Guid puestoId, [FromQuery] TopCoincidenciasRequest request, CancellationToken cancellationToken)
     {

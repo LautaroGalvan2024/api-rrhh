@@ -74,8 +74,9 @@ dotnet run --project src/RecruitAI.Web
 * `POST /api/coincidencias/puestos/{puestoId}/embedding` — Genera y persiste el embedding del puesto.
 * `POST /api/coincidencias/candidatos/{candidatoId}/embedding` — Genera y persiste el embedding del candidato.
 * `GET /api/coincidencias/puestos/{puestoId}/top?cantidad=20&umbral=0.65` — Obtiene coincidencias ordenadas descendentemente por puntaje.
+* `POST /api/auth/token` — Genera un token JWT para utilizar en Swagger.
 
-Swagger incluye soporte para autenticación JWT (pendiente de habilitar). FluentValidation valida automáticamente los DTOs de entrada.
+Swagger permite solicitar el token JWT desde el propio portal (endpoints `Auth`) y reutilizarlo mediante el botón **Authorize**. FluentValidation valida automáticamente los DTOs de entrada.
 
 ## Siguientes pasos
 

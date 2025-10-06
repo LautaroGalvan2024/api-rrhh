@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using RecruitAI.Contratos.Entidades;
 using RecruitAI.Contratos.Interfaces.Repositorios;
@@ -8,13 +9,17 @@ namespace RecruitAI.Datos.Repositorios;
 
 public class CandidatoRepositorio : RepositorioGenerico<Candidato, ICandidatoEntidad>, ICandidatoRepositorio
 {
-    public CandidatoRepositorio(CherokeeDbContext context) : base(context)
+    public CandidatoRepositorio(
+        CherokeeDbContext contextoEscritura,
+        IDbContextFactory<CherokeeDbContext> contextoLecturaFactory) : base(contextoEscritura, contextoLecturaFactory)
     {
     }
 
     public async Task<ICandidatoEntidad?> ObtenerConEmbeddingAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entidad = await Context.Candidatos
+        await using var contextoLectura = await ContextoLecturaFactory.CreateDbContextAsync(cancellationToken);
+        var entidad = await contextoLectura.Candidatos
+            .AsNoTracking()
             .Include(x => x.EmbeddingCandidato)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         return entidad;
@@ -22,7 +27,9 @@ public class CandidatoRepositorio : RepositorioGenerico<Candidato, ICandidatoEnt
 
     public async Task<List<ICandidatoEntidad>> ListarConEmbeddingAsync(CancellationToken cancellationToken = default)
     {
-        var entidades = await Context.Candidatos
+        await using var contextoLectura = await ContextoLecturaFactory.CreateDbContextAsync(cancellationToken);
+        var entidades = await contextoLectura.Candidatos
+            .AsNoTracking()
             .Include(x => x.EmbeddingCandidato)
             .ToListAsync(cancellationToken);
         return entidades.Cast<ICandidatoEntidad>().ToList();

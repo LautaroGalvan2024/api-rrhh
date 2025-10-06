@@ -8,13 +8,17 @@ namespace RecruitAI.Datos.Repositorios;
 
 public class PuestoRepositorio : RepositorioGenerico<Puesto, IPuestoEntidad>, IPuestoRepositorio
 {
-    public PuestoRepositorio(CherokeeDbContext context) : base(context)
+    public PuestoRepositorio(
+        CherokeeDbContext contextoEscritura,
+        IDbContextFactory<CherokeeDbContext> contextoLecturaFactory) : base(contextoEscritura, contextoLecturaFactory)
     {
     }
 
     public async Task<IPuestoEntidad?> ObtenerConEmbeddingAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var entidad = await Context.Puestos
+        await using var contextoLectura = await ContextoLecturaFactory.CreateDbContextAsync(cancellationToken);
+        var entidad = await contextoLectura.Puestos
+            .AsNoTracking()
             .Include(x => x.EmbeddingPuesto)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         return entidad;
