@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,18 +13,16 @@ namespace RecruitAI.Web.Controllers;
 public class PuestosController : ControllerBase
 {
     private readonly CherokeeDbContext _contexto;
-    private readonly CherokeeDbContextLectura _contextoLectura;
 
-    public PuestosController(CherokeeDbContext contexto, CherokeeDbContextLectura contextoLectura)
+    public PuestosController(CherokeeDbContext contexto)
     {
         _contexto = contexto;
-        _contextoLectura = contextoLectura;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<PuestoDto>>> ObtenerAsync(CancellationToken cancellationToken)
     {
-        var puestos = await _contextoLectura.Puestos
+        var puestos = await _contexto.Puestos
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
@@ -35,7 +33,7 @@ public class PuestosController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<PuestoDto>> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        var puesto = await _contextoLectura.Puestos
+        var puesto = await _contexto.Puestos
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
@@ -64,17 +64,10 @@ builder.Services.AddCors(opciones =>
 
 var cadenaCompleta = builder.Configuration.GetConnectionString("RecruitAIConexionCompleta")
     ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'RecruitAIConexionCompleta'.");
-var cadenaLectura = builder.Configuration.GetConnectionString("RecruitAIConexionSoloLectura")
-    ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'RecruitAIConexionSoloLectura'.");
 
 builder.Services.AddDbContext<CherokeeDbContext>(opciones =>
 {
     opciones.UseSqlServer(cadenaCompleta);
-});
-
-builder.Services.AddDbContext<CherokeeDbContextLectura>(opciones =>
-{
-    opciones.UseSqlServer(cadenaLectura);
 });
 
 builder.Services.AddScoped<IPuestoRepositorio, PuestoRepositorio>();

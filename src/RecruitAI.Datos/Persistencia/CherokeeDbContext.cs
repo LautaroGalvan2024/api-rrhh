@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RecruitAI.Datos.Entidades;
 
 namespace RecruitAI.Datos.Persistencia;

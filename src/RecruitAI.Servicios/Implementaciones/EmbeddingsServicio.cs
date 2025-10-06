@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Configuration;
@@ -44,7 +44,7 @@ public class EmbeddingsServicio : IEmbeddingsServicio
         var vector = contenido.data.FirstOrDefault()?.embedding
             ?? throw new InvalidOperationException("OpenAI no devolvió ningún vector de embedding.");
 
-        return vector;
+        return vector.ToArray();
     }
 
     public byte[] ConvertirABytes(float[] vector) => VectorUtil.ConvertirABytes(vector);

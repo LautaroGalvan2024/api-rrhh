@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
@@ -74,11 +74,6 @@ public static class AddServices
         builder.Services.AddDbContext<CherokeeDbContext>(opciones =>
         {
             opciones.UseSqlServer(cadenaCompleta);
-        });
-
-        builder.Services.AddDbContext<CherokeeDbContextLectura>(opciones =>
-        {
-            opciones.UseSqlServer(cadenaLectura);
         });
 
         builder.Services.AddScoped<IPuestoRepositorio, PuestoRepositorio>();
