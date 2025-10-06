@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RecruitAI.Contratos.Entidades;
 using RecruitAI.Contratos.Interfaces.Repositorios;
 using RecruitAI.Datos.Entidades;
@@ -8,16 +8,15 @@ namespace RecruitAI.Datos.Repositorios;
 
 public class PuestoRepositorio : RepositorioGenerico<Puesto, IPuestoEntidad>, IPuestoRepositorio
 {
-    public PuestoRepositorio(
-        CherokeeDbContext contextoEscritura,
-        IDbContextFactory<CherokeeDbContext> contextoLecturaFactory) : base(contextoEscritura, contextoLecturaFactory)
+    public PuestoRepositorio(IDbContextFactory<CherokeeDbContext> contextoFactory)
+        : base(contextoFactory)
     {
     }
 
     public async Task<IPuestoEntidad?> ObtenerConEmbeddingAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await using var contextoLectura = await ContextoLecturaFactory.CreateDbContextAsync(cancellationToken);
-        var entidad = await contextoLectura.Puestos
+        await using var contexto = await _contextoFactory.CreateDbContextAsync(cancellationToken);
+        var entidad = await contexto.Puestos
             .AsNoTracking()
             .Include(x => x.EmbeddingPuesto)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);

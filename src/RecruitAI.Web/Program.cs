@@ -1,4 +1,4 @@
-using RecruitAI.Web.Configuracion;
+﻿using RecruitAI.Web.Configuracion;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +8,6 @@ var app = builder.Build();
 
 app.ConfigurarAplicacionRecruitAI();
 
-await app.InicializarDatosAsync();
+//await app.InicializarDatosAsync();
 
 app.Run();

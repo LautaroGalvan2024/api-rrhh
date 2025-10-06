@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using System.Text.Json;
 using FluentValidation;
@@ -23,14 +23,17 @@ public static class AddServices
 {
     public static WebApplicationBuilder RegistrarServiciosRecruitAI(this WebApplicationBuilder builder)
     {
+        // Serilog
         builder.Host.UseSerilog((contexto, servicios, configuracion) =>
             configuracion.ReadFrom.Configuration(contexto.Configuration).ReadFrom.Services(servicios));
 
         builder.Services.AddControllers();
 
+        // FluentValidation
         builder.Services.AddFluentValidationAutoValidation();
         builder.Services.AddValidatorsFromAssemblies(AppDomain.CurrentDomain.GetAssemblies());
 
+        // Swagger
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(opciones =>
         {
@@ -53,25 +56,21 @@ public static class AddServices
 
             opciones.AddSecurityDefinition("Bearer", esquema);
             opciones.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    esquema,
-                    Array.Empty<string>()
-                }
-            });
+        {
+            { esquema, Array.Empty<string>() }
+        });
         });
 
+        // CORS
         builder.Services.AddCors(opciones =>
         {
             opciones.AddPolicy("cors-desarrollo", configuracion =>
             {
-                configuracion
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowAnyOrigin();
+                configuracion.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin();
             });
         });
 
+        // Configuración de base de datos
         var opcionesBaseDatos = builder.Configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();
         var proveedor = opcionesBaseDatos.Provider?.Trim();
 
@@ -83,10 +82,7 @@ public static class AddServices
 
             cadenaSqlite = NormalizarRutaSqlite(cadenaSqlite);
 
-            builder.Services.AddDbContext<CherokeeDbContext>(opciones =>
-            {
-                opciones.UseSqlite(cadenaSqlite);
-            });
+            // Solo usamos el factory, eliminamos AddDbContext
             builder.Services.AddDbContextFactory<CherokeeDbContext>(opciones =>
             {
                 opciones.UseSqlite(cadenaSqlite);
@@ -96,28 +92,22 @@ public static class AddServices
         {
             var cadenaCompleta = opcionesBaseDatos.ConnectionString
                 ?? builder.Configuration.GetConnectionString("RecruitAIConexionCompleta")
-                ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'RecruitAIConexionCompleta'.");
-            var cadenaLectura = opcionesBaseDatos.ReadOnlyConnectionString
-                ?? builder.Configuration.GetConnectionString("RecruitAIConexionSoloLectura")
-                ?? cadenaCompleta;
+                ?? throw new InvalidOperationException("No se encontró la cadena de conexión.");
 
-            builder.Services.AddDbContext<CherokeeDbContext>(opciones =>
+            // Solo usamos el factory
+            builder.Services.AddDbContextFactory<CherokeeDbContext>(opciones =>
             {
                 opciones.UseSqlServer(cadenaCompleta);
             });
-            builder.Services.AddDbContextFactory<CherokeeDbContext>(opciones =>
-            {
-                opciones.UseSqlServer(cadenaLectura);
-            });
         }
 
+        // JWT
         var jwtSection = builder.Configuration.GetSection("Jwt");
         var jwtOptions = jwtSection.Get<JwtOptions>()
             ?? throw new InvalidOperationException("No se encontró la configuración de Jwt.");
+
         if (string.IsNullOrWhiteSpace(jwtOptions.Secreto))
-        {
             throw new InvalidOperationException("El secreto para firmar JWT no está configurado.");
-        }
 
         builder.Services.Configure<JwtOptions>(jwtSection);
 
@@ -142,6 +132,7 @@ public static class AddServices
             opciones.AddPolicy("administracion", politica => politica.RequireRole(RolesAplicacion.Administrador));
         });
 
+        // Repositorios y servicios
         builder.Services.AddScoped<IPuestoRepositorio, PuestoRepositorio>();
         builder.Services.AddScoped<ICandidatoRepositorio, CandidatoRepositorio>();
         builder.Services.AddScoped<ICoincidenciasServicio, CoincidenciasServicio>();
@@ -151,6 +142,7 @@ public static class AddServices
 
         return builder;
     }
+
 
     public static WebApplication ConfigurarAplicacionRecruitAI(this WebApplication app)
     {

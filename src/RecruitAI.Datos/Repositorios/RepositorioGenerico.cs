@@ -1,5 +1,4 @@
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RecruitAI.Contratos.Interfaces.Repositorios;
 using RecruitAI.Datos.Persistencia;
 
@@ -8,57 +7,65 @@ namespace RecruitAI.Datos.Repositorios;
 public class RepositorioGenerico<TEntity, TModelo> : IRepositorioGenerico<TModelo>
     where TEntity : class, TModelo
 {
-    protected readonly CherokeeDbContext ContextoEscritura;
-    protected readonly IDbContextFactory<CherokeeDbContext> ContextoLecturaFactory;
-    protected readonly DbSet<TEntity> ConjuntoEscritura;
+    protected readonly IDbContextFactory<CherokeeDbContext> _contextoFactory;
 
-    public RepositorioGenerico(
-        CherokeeDbContext contextoEscritura,
-        IDbContextFactory<CherokeeDbContext> contextoLecturaFactory)
+    public RepositorioGenerico(IDbContextFactory<CherokeeDbContext> contextoFactory)
     {
-        ContextoEscritura = contextoEscritura;
-        ContextoLecturaFactory = contextoLecturaFactory;
-        ConjuntoEscritura = contextoEscritura.Set<TEntity>();
+        _contextoFactory = contextoFactory;
     }
 
+    // Obtener por ID
     public virtual async Task<TModelo?> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await using var contextoLectura = await ContextoLecturaFactory.CreateDbContextAsync(cancellationToken);
-        var entidad = await contextoLectura.Set<TEntity>().FindAsync(new object?[] { id }, cancellationToken);
-        return entidad;
+        await using var contexto = await _contextoFactory.CreateDbContextAsync(cancellationToken);
+        return await contexto.Set<TEntity>().FindAsync(new object?[] { id }, cancellationToken);
     }
 
+    // Listar todos
     public virtual async Task<List<TModelo>> ListarAsync(CancellationToken cancellationToken = default)
     {
-        await using var contextoLectura = await ContextoLecturaFactory.CreateDbContextAsync(cancellationToken);
-        var resultados = await contextoLectura.Set<TEntity>()
+        await using var contexto = await _contextoFactory.CreateDbContextAsync(cancellationToken);
+        var resultados = await contexto.Set<TEntity>()
             .AsNoTracking()
             .ToListAsync(cancellationToken);
         return resultados.Cast<TModelo>().ToList();
     }
 
+    // Agregar
     public virtual async Task AgregarAsync(TModelo entidad, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entidad);
-        await ConjuntoEscritura.AddAsync((TEntity)entidad, cancellationToken);
+
+        await using var contexto = await _contextoFactory.CreateDbContextAsync(cancellationToken);
+        await contexto.Set<TEntity>().AddAsync((TEntity)entidad, cancellationToken);
+        await contexto.SaveChangesAsync(cancellationToken);
     }
 
-    public virtual Task ActualizarAsync(TModelo entidad, CancellationToken cancellationToken = default)
+    // Actualizar
+    public virtual async Task ActualizarAsync(TModelo entidad, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entidad);
-        ConjuntoEscritura.Update((TEntity)entidad);
-        return Task.CompletedTask;
+
+        await using var contexto = await _contextoFactory.CreateDbContextAsync(cancellationToken);
+        contexto.Set<TEntity>().Update((TEntity)entidad);
+        await contexto.SaveChangesAsync(cancellationToken);
     }
 
-    public virtual Task EliminarAsync(TModelo entidad, CancellationToken cancellationToken = default)
+    // Eliminar
+    public virtual async Task EliminarAsync(TModelo entidad, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entidad);
-        ConjuntoEscritura.Remove((TEntity)entidad);
-        return Task.CompletedTask;
+
+        await using var contexto = await _contextoFactory.CreateDbContextAsync(cancellationToken);
+        contexto.Set<TEntity>().Remove((TEntity)entidad);
+        await contexto.SaveChangesAsync(cancellationToken);
     }
 
-    public virtual Task GuardarCambiosAsync(CancellationToken cancellationToken = default)
+    // Guardar cambios (opcional)
+    // Si quieres mantener el método por compatibilidad de interfaz
+    public virtual async Task GuardarCambiosAsync(CancellationToken cancellationToken = default)
     {
-        return ContextoEscritura.SaveChangesAsync(cancellationToken);
+        await using var contexto = await _contextoFactory.CreateDbContextAsync(cancellationToken);
+        await contexto.SaveChangesAsync(cancellationToken);
     }
 }

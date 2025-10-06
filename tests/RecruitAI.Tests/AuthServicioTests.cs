@@ -1,5 +1,7 @@
+﻿using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using RecruitAI.Contratos.Dtos.Autenticacion;
 using RecruitAI.Servicios.Implementaciones;
