@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RecruitAI.Contratos.Dtos.Ia;
 using RecruitAI.Contratos.Interfaces.Servicios;
@@ -6,6 +7,7 @@ namespace RecruitAI.Web.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "lectura")]
 public class IaController : ControllerBase
 {
     private readonly IIaServicio _iaServicio;

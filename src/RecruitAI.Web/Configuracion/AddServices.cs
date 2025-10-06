@@ -1,8 +1,13 @@
-﻿using System.Text.Json;
+using System.Text;
+using System.Text.Json;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RecruitAI.Contratos.Configuracion;
+using RecruitAI.Contratos.Constantes;
 using RecruitAI.Contratos.Interfaces.Repositorios;
 using RecruitAI.Contratos.Interfaces.Servicios;
 using RecruitAI.Datos.Entidades;
@@ -75,11 +80,49 @@ public static class AddServices
         {
             opciones.UseSqlServer(cadenaCompleta);
         });
+        var opcionesLectura = new DbContextOptionsBuilder<CherokeeDbContext>()
+            .UseSqlServer(cadenaLectura)
+            .Options;
+
+        builder.Services.AddSingleton<IDbContextFactory<CherokeeDbContext>>(
+            _ => new CherokeeDbContextLecturaFactory(opcionesLectura));
+
+        var jwtSection = builder.Configuration.GetSection("Jwt");
+        var jwtOptions = jwtSection.Get<JwtOptions>()
+            ?? throw new InvalidOperationException("No se encontró la configuración de Jwt.");
+        if (string.IsNullOrWhiteSpace(jwtOptions.Secreto))
+        {
+            throw new InvalidOperationException("El secreto para firmar JWT no está configurado.");
+        }
+
+        builder.Services.Configure<JwtOptions>(jwtSection);
+
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(opciones =>
+            {
+                opciones.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidateLifetime = true,
+                    ValidIssuer = jwtOptions.Emisor,
+                    ValidAudience = jwtOptions.Audiencia,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secreto))
+                };
+            });
+
+        builder.Services.AddAuthorization(opciones =>
+        {
+            opciones.AddPolicy("lectura", politica => politica.RequireRole(RolesAplicacion.Todos));
+            opciones.AddPolicy("administracion", politica => politica.RequireRole(RolesAplicacion.Administrador));
+        });
 
         builder.Services.AddScoped<IPuestoRepositorio, PuestoRepositorio>();
         builder.Services.AddScoped<ICandidatoRepositorio, CandidatoRepositorio>();
         builder.Services.AddScoped<ICoincidenciasServicio, CoincidenciasServicio>();
-        builder.Services.AddScoped<IIaServicio, IaServicio>();
+        builder.Services.AddScoped<IAuthServicio, AuthServicio>();
+        builder.Services.AddHttpClient<IIaServicio, IaServicio>();
         builder.Services.AddHttpClient<IEmbeddingsServicio, EmbeddingsServicio>();
 
         return builder;
@@ -99,7 +142,7 @@ public static class AddServices
 
         app.UseHttpsRedirection();
 
-        // app.UseAuthentication();
+        app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapControllers();
