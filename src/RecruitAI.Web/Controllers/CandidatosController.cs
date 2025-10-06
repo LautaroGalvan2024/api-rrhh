@@ -1,6 +1,8 @@
-﻿using System.Linq;
+using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RecruitAI.Contratos.Constantes;
 using RecruitAI.Contratos.Dtos.Candidatos;
 using RecruitAI.Datos.Entidades;
 using RecruitAI.Datos.Persistencia;
@@ -9,19 +11,26 @@ namespace RecruitAI.Web.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class CandidatosController : ControllerBase
 {
-    private readonly CherokeeDbContext _contexto;
+    private readonly CherokeeDbContext _contextoEscritura;
+    private readonly IDbContextFactory<CherokeeDbContext> _contextoLecturaFactory;
 
-    public CandidatosController(CherokeeDbContext contexto)
+    public CandidatosController(
+        CherokeeDbContext contextoEscritura,
+        IDbContextFactory<CherokeeDbContext> contextoLecturaFactory)
     {
-        _contexto = contexto;
+        _contextoEscritura = contextoEscritura;
+        _contextoLecturaFactory = contextoLecturaFactory;
     }
 
+    [Authorize(Policy = "lectura")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<CandidatoDto>>> ObtenerAsync(CancellationToken cancellationToken)
     {
-        var candidatos = await _contexto.Candidatos
+        await using var contextoLectura = await _contextoLecturaFactory.CreateDbContextAsync(cancellationToken);
+        var candidatos = await contextoLectura.Candidatos
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
@@ -29,10 +38,12 @@ public class CandidatosController : ControllerBase
         return Ok(resultado);
     }
 
+    [Authorize(Policy = "lectura")]
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CandidatoDto>> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        var candidato = await _contexto.Candidatos
+        await using var contextoLectura = await _contextoLecturaFactory.CreateDbContextAsync(cancellationToken);
+        var candidato = await contextoLectura.Candidatos
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
@@ -44,6 +55,7 @@ public class CandidatosController : ControllerBase
         return Ok(MapearCandidato(candidato));
     }
 
+    [Authorize(Policy = "administracion")]
     [HttpPost]
     public async Task<ActionResult<CandidatoDto>> CrearAsync([FromBody] CrearCandidatoDto dto, CancellationToken cancellationToken)
     {
@@ -57,17 +69,18 @@ public class CandidatosController : ControllerBase
             CreadoEl = DateTime.UtcNow
         };
 
-        await _contexto.Candidatos.AddAsync(candidato, cancellationToken);
-        await _contexto.SaveChangesAsync(cancellationToken);
+        await _contextoEscritura.Candidatos.AddAsync(candidato, cancellationToken);
+        await _contextoEscritura.SaveChangesAsync(cancellationToken);
 
         var resultado = MapearCandidato(candidato);
         return CreatedAtAction(nameof(ObtenerPorIdAsync), new { id = candidato.Id }, resultado);
     }
 
+    [Authorize(Policy = "administracion")]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<CandidatoDto>> ActualizarAsync(Guid id, [FromBody] EditarCandidatoDto dto, CancellationToken cancellationToken)
     {
-        var candidato = await _contexto.Candidatos.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var candidato = await _contextoEscritura.Candidatos.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (candidato is null)
         {
             return NotFound();
@@ -78,22 +91,23 @@ public class CandidatosController : ControllerBase
         candidato.Fuente = dto.Fuente;
         candidato.CvTexto = dto.CvTexto;
 
-        await _contexto.SaveChangesAsync(cancellationToken);
+        await _contextoEscritura.SaveChangesAsync(cancellationToken);
 
         return Ok(MapearCandidato(candidato));
     }
 
+    [Authorize(Policy = "administracion")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> EliminarAsync(Guid id, CancellationToken cancellationToken)
     {
-        var candidato = await _contexto.Candidatos.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var candidato = await _contextoEscritura.Candidatos.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (candidato is null)
         {
             return NotFound();
         }
 
-        _contexto.Candidatos.Remove(candidato);
-        await _contexto.SaveChangesAsync(cancellationToken);
+        _contextoEscritura.Candidatos.Remove(candidato);
+        await _contextoEscritura.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
