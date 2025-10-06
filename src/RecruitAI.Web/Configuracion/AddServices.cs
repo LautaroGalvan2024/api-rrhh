@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using FluentValidation;
@@ -71,19 +72,44 @@ public static class AddServices
             });
         });
 
-        var cadenaCompleta = builder.Configuration.GetConnectionString("RecruitAIConexionCompleta")
-            ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'RecruitAIConexionCompleta'.");
-        var cadenaLectura = builder.Configuration.GetConnectionString("RecruitAIConexionSoloLectura")
-            ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'RecruitAIConexionSoloLectura'.");
+        var opcionesBaseDatos = builder.Configuration.GetSection("Database").Get<DatabaseOptions>() ?? new DatabaseOptions();
+        var proveedor = opcionesBaseDatos.Provider?.Trim();
 
-        builder.Services.AddDbContext<CherokeeDbContext>(opciones =>
+        if (string.Equals(proveedor, "Sqlite", StringComparison.OrdinalIgnoreCase))
         {
-            opciones.UseSqlServer(cadenaCompleta);
-        });
-        builder.Services.AddDbContextFactory<CherokeeDbContext>(opciones =>
+            var cadenaSqlite = opcionesBaseDatos.ConnectionString
+                ?? builder.Configuration.GetConnectionString("RecruitAISqlite")
+                ?? "Data Source=App_Data/recruitai.db";
+
+            cadenaSqlite = NormalizarRutaSqlite(cadenaSqlite);
+
+            builder.Services.AddDbContext<CherokeeDbContext>(opciones =>
+            {
+                opciones.UseSqlite(cadenaSqlite);
+            });
+            builder.Services.AddDbContextFactory<CherokeeDbContext>(opciones =>
+            {
+                opciones.UseSqlite(cadenaSqlite);
+            });
+        }
+        else
         {
-            opciones.UseSqlServer(cadenaLectura);
-        });
+            var cadenaCompleta = opcionesBaseDatos.ConnectionString
+                ?? builder.Configuration.GetConnectionString("RecruitAIConexionCompleta")
+                ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'RecruitAIConexionCompleta'.");
+            var cadenaLectura = opcionesBaseDatos.ReadOnlyConnectionString
+                ?? builder.Configuration.GetConnectionString("RecruitAIConexionSoloLectura")
+                ?? cadenaCompleta;
+
+            builder.Services.AddDbContext<CherokeeDbContext>(opciones =>
+            {
+                opciones.UseSqlServer(cadenaCompleta);
+            });
+            builder.Services.AddDbContextFactory<CherokeeDbContext>(opciones =>
+            {
+                opciones.UseSqlServer(cadenaLectura);
+            });
+        }
 
         var jwtSection = builder.Configuration.GetSection("Jwt");
         var jwtOptions = jwtSection.Get<JwtOptions>()
@@ -191,5 +217,49 @@ public static class AddServices
 
             await contexto.SaveChangesAsync();
         }
+    }
+
+    private static string NormalizarRutaSqlite(string cadenaConexion)
+    {
+        const string claveDataSource = "Data Source=";
+        var indiceInicio = cadenaConexion.IndexOf(claveDataSource, StringComparison.OrdinalIgnoreCase);
+        if (indiceInicio < 0)
+        {
+            return cadenaConexion;
+        }
+
+        var inicioRuta = indiceInicio + claveDataSource.Length;
+        var indiceFin = cadenaConexion.IndexOf(';', inicioRuta);
+        var ruta = indiceFin >= 0
+            ? cadenaConexion[inicioRuta..indiceFin]
+            : cadenaConexion[inicioRuta..];
+
+        ruta = ruta.Trim();
+        if (string.IsNullOrEmpty(ruta))
+        {
+            return cadenaConexion;
+        }
+
+        if (!Path.IsPathRooted(ruta))
+        {
+            var rutaCompleta = Path.Combine(AppContext.BaseDirectory, ruta);
+            var directorio = Path.GetDirectoryName(rutaCompleta);
+            if (!string.IsNullOrEmpty(directorio))
+            {
+                Directory.CreateDirectory(directorio);
+            }
+
+            var prefijo = cadenaConexion[..inicioRuta];
+            var sufijo = indiceFin >= 0 ? cadenaConexion[indiceFin..] : string.Empty;
+            return prefijo + rutaCompleta + sufijo;
+        }
+
+        var directorioRutaAbsoluta = Path.GetDirectoryName(ruta);
+        if (!string.IsNullOrEmpty(directorioRutaAbsoluta))
+        {
+            Directory.CreateDirectory(directorioRutaAbsoluta);
+        }
+
+        return cadenaConexion;
     }
 }
