@@ -5,7 +5,7 @@ namespace RecruitAI.Datos.Persistencia;
 
 public class CherokeeDbContext : DbContext
 {
-    public CherokeeDbContext(DbContextOptions options) : base(options)
+    public CherokeeDbContext(DbContextOptions<CherokeeDbContext> options) : base(options)
     {
     }
 
