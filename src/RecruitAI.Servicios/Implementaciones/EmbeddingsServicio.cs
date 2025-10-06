@@ -44,7 +44,7 @@ public class EmbeddingsServicio : IEmbeddingsServicio
         var vector = contenido.data.FirstOrDefault()?.embedding
             ?? throw new InvalidOperationException("OpenAI no devolvió ningún vector de embedding.");
 
-        return vector.ToArray();
+        return vector;
     }
 
     public byte[] ConvertirABytes(float[] vector) => VectorUtil.ConvertirABytes(vector);
