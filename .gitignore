@@ -1,0 +1,31 @@
+# Archivos de compilación
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Herramientas
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# VSCode
+.vscode/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Paquetes
+packages/
+*.nupkg
+
+# Logs
+*.log
+
+# Secretos
+secrets.json
+.env
